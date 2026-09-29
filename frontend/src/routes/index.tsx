@@ -1,0 +1,32 @@
+import { createFileRoute, Link } from '@tanstack/react-router'
+import { ArrowRight, CheckCircle2, Compass, Fish, Map, MessageCircle, Radio, ShieldAlert, Waves } from 'lucide-react'
+import { Button, SectionHead, StatusPill } from '../components/OrcaUI'
+import hero from '../assets/orca-coast-hero.jpg'
+import fishing from '../assets/orca-fishing.jpg'
+
+export const Route = createFileRoute('/')({
+  head: () => ({ meta: [
+    { title: 'ORCA — Ocean Intelligence for India’s Coasts' },
+    { name: 'description', content: 'Explore ORCA, an ocean intelligence platform bringing marine conditions, fishing information, safety alerts and coastal guidance into one accessible place.' },
+    { property: 'og:title', content: 'ORCA — Ocean Intelligence for India’s Coasts' },
+    { property: 'og:description', content: 'Clearer ocean information for safer decisions at sea.' },
+    { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary_large_image' },
+  ] }), component: Home,
+})
+const features = [
+  { title: 'Ask ORCA', description: 'Ask a coastal question in natural language and see how an evidence-backed answer could look.', icon: MessageCircle, to: '/ask' },
+  { title: 'Ocean conditions', description: 'Explore wave, wind and sea conditions for selected coastal locations.', icon: Waves, to: '/conditions' },
+  { title: 'Fishing zones', description: 'Understand potential fishing-zone advisories and the data behind them.', icon: Fish, to: '/fishing-zones' },
+  { title: 'Safety alerts', description: 'See how clear, location-aware marine warnings can be presented.', icon: ShieldAlert, to: '/alerts' },
+  { title: 'Route planning', description: 'Review a sample route with safety considerations along the way.', icon: Compass, to: '/routes' },
+  { title: 'Marine boundaries', description: 'Learn about boundary proximity and protected-area awareness.', icon: Map, to: '/boundaries' },
+  { title: 'Daily briefings', description: 'Preview a simple daily coastal briefing in an accessible format.', icon: Radio, to: '/briefings' },
+] as const
+function Home() { return <>
+  <section className="hero"><img className="hero-image" src={hero} width={1600} height={900} alt="Fishing boats heading out from an Indian coastal harbour"/><div className="container hero-inner"><span className="eyebrow">OCEAN INTELLIGENCE · FOR INDIA'S COASTS</span><h1>Know the sea.<br/>Navigate with confidence.</h1><p>One clear place to explore marine conditions, fishing information and coastal safety — designed around the people who depend on the ocean every day.</p><div className="hero-actions"><Link to="/ask"><Button>Ask ORCA <ArrowRight size={16}/></Button></Link><Link to="/conditions"><Button variant="outline">Explore ocean conditions</Button></Link></div></div><span className="hero-caption">ORCA · Ocean intelligence for India's coasts</span></section>
+  <div className="intro-band"><div className="container intro-band-inner"><div className="intro-stat"><strong>7</strong><span>Connected coastal tools</span></div><div className="intro-stat"><strong>One place</strong><span>For ocean information</span></div><div className="intro-stat"><strong>Evidence first</strong><span>Clarity behind every answer</span></div><div className="intro-stat"><strong>Made for India</strong><span>Accessible by design</span></div></div></div>
+  <section className="section"><div className="container"><SectionHead eyebrow="EXPLORE THE PLATFORM" title="The right information, when it matters" description="From a question before departure to conditions along a route, ORCA brings the essentials into view."/><div className="feature-grid">{features.map(feature => <Link to={feature.to} className="feature-card" key={feature.to}><span className="feature-icon"><feature.icon size={21}/></span><h3>{feature.title}</h3><p>{feature.description}</p><span className="text-link">Explore feature <ArrowRight size={15}/></span></Link>)}</div></div></section>
+  <section className="section section-soft"><div className="container home-split"><div><span className="eyebrow">BUILT AROUND REAL DECISIONS</span><h2>Ocean information should make sense to everyone.</h2><p>Weather, satellite and marine information is often spread across different sources. ORCA is designed to bring it together in a way that feels clear, useful and accountable.</p><ul className="info-list"><li><CheckCircle2 size={17}/> Plain-language answers grounded in visible information</li><li><CheckCircle2 size={17}/> Location-specific context, maps and safety cues</li><li><CheckCircle2 size={17}/> A path toward support for Indian languages and voice</li></ul><Link to="/about" className="text-link">Learn about the ORCA approach <ArrowRight size={17}/></Link></div><img className="media-photo" src={fishing} width={1200} height={800} loading="lazy" alt="Fishers working with nets aboard a boat in the Arabian Sea"/></div></section>
+  <section className="section"><div className="container"><SectionHead eyebrow="COASTAL AWARENESS" title="A clearer picture before heading out" description="A preview of how place-based information could be organized. These are illustrative examples, not live advisories." action="View all alerts" to="/alerts"/><div className="alert-row"><div className="alert-card"><div className="alert-card-top"><StatusPill tone="amber">Sample caution</StatusPill><small>Western coast</small></div><h3>Watch changing sea conditions</h3><p>Check the latest official marine bulletin before departure and throughout your trip.</p></div><div className="alert-card"><div className="alert-card-top"><StatusPill>Planning tip</StatusPill><small>All locations</small></div><h3>Review your route</h3><p>Consider conditions across the full journey, not only at the departure point.</p></div><div className="alert-card"><div className="alert-card-top"><StatusPill tone="amber">Boundary awareness</StatusPill><small>Offshore areas</small></div><h3>Know where you are</h3><p>Use approved navigational charts to stay aware of restricted and protected areas.</p></div></div></div></section>
+  <section className="home-cta"><div className="container home-cta-inner"><div><span className="eyebrow">A BETTER WAY TO ASK</span><h2>Have a question about the coast?</h2><p>Explore how an ORCA conversation could bring the answer and its context together.</p></div><Link to="/ask"><Button variant="light">Ask ORCA <ArrowRight size={16}/></Button></Link></div></section>
+</> }
