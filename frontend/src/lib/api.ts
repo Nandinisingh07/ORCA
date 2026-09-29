@@ -1,5 +1,4 @@
-// Drop into sea-scribe-gallery/src/lib/api.ts. Set VITE_API_URL in .env (default http://localhost:8000).
-// Language/place values from your existing <select>s (e.g. "हिन्दी (Hindi)", "Veraval, Gujarat") work as-is.
+// Shared API client for the ORCA frontend.
 const BASE: string = (import.meta as any).env?.VITE_API_URL ?? 'http://localhost:8000'
 
 export type DataMode = 'live' | 'cached' | 'mock'
@@ -34,9 +33,3 @@ export const api = {
   boundaryCheck: (lat: number, lon: number) => req<any>('/api/boundaries/check', { method: 'POST', body: JSON.stringify({ lat, lon }) }),
   briefing: (place: string, lang = 'en', mode: 'simple' | 'technical' = 'simple') => req<any>('/api/briefing' + qs({ place, lang, mode })),
 }
-
-// Example: wire /ask (replace the hard-coded answer in ask.tsx `submit`)
-//   const [sid, setSid] = useState<string>()
-//   const res = await api.chat({ message: question, session_id: sid, language, mode, place })
-//   setSid(res.session_id); setHistory(h => [...h, { q: question, res }])
-//   // render res.answer, res.evidence (source + data_mode + time), res.confidence, res.data_mode badge

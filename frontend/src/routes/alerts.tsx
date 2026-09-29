@@ -1,7 +1,209 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
-import { Bell, CloudLightning, ShieldAlert, Waves } from 'lucide-react'
-import { Button, MiniMap, Notice, PageIntro, SectionHead, StatusPill } from '../components/OrcaUI'
+import { useEffect, useState } from 'react'
+import { Bell, CloudLightning, RefreshCw, Waves } from 'lucide-react'
+import { Button, Notice, PageIntro, SectionHead, StatusPill } from '../components/OrcaUI'
 import coast from '../assets/orca-coastline.jpg'
-export const Route=createFileRoute('/alerts')({head:()=>({meta:[{title:'Safety Alerts — ORCA'},{name:'description',content:'Explore the ORCA safety alert concept for wave, storm, coastal and boundary awareness.'},{property:'og:title',content:'Safety Alerts — ORCA'},{property:'og:description',content:'Clear marine alert presentation for coastal awareness.'},{property:'og:type',content:'website'},{name:'twitter:card',content:'summary_large_image'}]}),component:Alerts})
-function Alerts(){const [region,setRegion]=useState('All coasts');const [filter,setFilter]=useState('All');return <><PageIntro eyebrow="COASTAL SAFETY" title="Safety alerts" description="Important information should be easy to spot and easy to act on. See how location-aware marine alerts could work in ORCA." image={coast}/><div className="container page-content"><Notice>These are example alert types, not active warnings. For urgent decisions, consult IMD and INCOIS directly.</Notice><div className="content-grid" style={{marginTop:22}}><div className="stack"><div className="content-panel"><div className="panel-head"><h2>Alert centre</h2><StatusPill tone="amber">Example view</StatusPill></div><div className="field-row"><div><label className="field-label" htmlFor="alerts-region">Coastal region</label><select className="select" id="alerts-region" value={region} onChange={e=>setRegion(e.target.value)}><option>All coasts</option><option>West coast</option><option>East coast</option></select></div><div><span className="field-label">Alert type</span><div className="tab-row" style={{marginBottom:0}}>{['All','Weather','Sea'].map(f=><Button key={f} variant={filter===f?'primary':'outline'} onClick={()=>setFilter(f)}>{f}</Button>)}</div></div></div><div style={{marginTop:20}}>{(filter==='All'||filter==='Sea')&&<div className="list-card"><div className="list-meta"><h3>High waves & rough seas</h3><StatusPill tone="amber">Example</StatusPill></div><p>Elevated wave conditions can affect smaller craft and offshore operations. A real alert would include the affected area, severity, valid time and official source.</p></div>}{(filter==='All'||filter==='Weather')&&<div className="list-card"><div className="list-meta"><h3>Cyclone or severe weather</h3><StatusPill tone="red">Example</StatusPill></div><p>Severe weather messages need prominent instructions, affected locations and links to the latest IMD bulletin.</p></div>}{(filter==='All'||filter==='Weather')&&<div className="list-card"><div className="list-meta"><h3>Thunderstorm & lightning</h3><StatusPill tone="amber">Example</StatusPill></div><p>Short-lived hazards may require quick changes to departure and return plans.</p></div>}</div><p className="source-line">Showing example categories for {region}. No live warning feed is connected.</p></div><div className="content-panel"><h2>How an alert is structured</h2><div className="data-grid"><div className="data-card"><small>Severity</small><strong>01</strong><span>Clear priority</span></div><div className="data-card"><small>Coverage</small><strong>02</strong><span>Area affected</span></div><div className="data-card"><small>Validity</small><strong>03</strong><span>Time window</span></div></div></div></div><div className="stack"><div className="content-panel"><h2>Geographic context</h2><MiniMap/><p className="source-line">Illustrative reference map · no active hazard layer.</p></div><div className="content-panel"><h2>Official warning sources</h2><p className="panel-desc">Always read the original advisory before acting.</p><div className="list-card"><h3>India Meteorological Department</h3><p>Weather warnings, cyclone bulletins and marine meteorology.</p></div><div className="list-card"><h3>INCOIS</h3><p>Ocean state forecasts and ocean hazard advisories.</p></div><a href="https://mausam.imd.gov.in" target="_blank" rel="noreferrer" className="text-link">Open IMD website →</a></div></div></div><div style={{marginTop:34}}><SectionHead eyebrow="SAFETY BY DESIGN" title="From a signal to a clear next step" description="Good alerts say what is happening, where, when, and what people should do next."/><div className="below-grid"><div className="detail-tile"><Waves size={22}/><h3>Marine hazards</h3><p>Wave, swell and sea-state information belongs alongside local weather warnings.</p></div><div className="detail-tile"><CloudLightning size={22}/><h3>Fast-moving weather</h3><p>Time and location are critical when the situation changes quickly.</p></div><div className="detail-tile"><Bell size={22}/><h3>Proactive delivery</h3><p>Future notifications could bring important warnings to people before they ask.</p></div></div></div></div></>}
+import { api } from '../lib/api'
+
+export const Route = createFileRoute('/alerts')({
+  head: () => ({
+    meta: [
+      { title: 'Safety Alerts — ORCA' },
+      {
+        name: 'description',
+        content: 'Live ORCA marine and weather alert intelligence for India’s coasts.',
+      },
+    ],
+  }),
+  component: Alerts,
+})
+
+const regions = ['All coasts', 'West coast', 'East coast']
+const filters = ['All', 'Weather', 'Sea']
+
+function toneFor(level: string): 'teal' | 'amber' | 'red' {
+  if (level === 'unsafe' || level === 'critical') return 'red'
+  if (level === 'safe' || level === 'low') return 'teal'
+  return 'amber'
+}
+
+function formatTime(value?: string | null) {
+  if (!value) return '—'
+  const d = new Date(value)
+  return Number.isNaN(d.getTime()) ? value : d.toLocaleString()
+}
+
+function Alerts() {
+  const [region, setRegion] = useState('All coasts')
+  const [filter, setFilter] = useState('All')
+  const [data, setData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  const load = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const result = await api.alerts(region, filter)
+      setData(result)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to load alerts.')
+      setData(null)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    void load()
+  }, [region, filter])
+
+  const alerts = data?.alerts ?? []
+
+  return (
+    <>
+      <PageIntro
+        eyebrow="COASTAL SAFETY"
+        title="Safety alerts"
+        description="Current ORCA risk signals across selected coastal regions, with the evidence, time window and data mode attached."
+        image={coast}
+      />
+
+      <div className="container page-content">
+        <Notice>
+          ORCA alert results are generated from the configured forecast/rule-engine pipeline.
+          Always verify urgent decisions with official IMD and INCOIS advisories.
+        </Notice>
+
+        <div className="content-grid" style={{ marginTop: 22 }}>
+          <div className="stack">
+            <div className="content-panel">
+              <div className="panel-head">
+                <div>
+                  <h2>Alert centre</h2>
+                  <p className="panel-desc" style={{ margin: 0 }}>
+                    {loading ? 'Refreshing forecast signals…' : `${alerts.length} alert item(s) returned`}
+                  </p>
+                </div>
+
+                <Button variant="outline" onClick={() => void load()} disabled={loading}>
+                  <RefreshCw size={15} />
+                  Refresh
+                </Button>
+              </div>
+
+              <div className="field-row" style={{ marginTop: 18 }}>
+                <div>
+                  <label className="field-label" htmlFor="alerts-region">
+                    Coastal region
+                  </label>
+                  <select
+                    className="select"
+                    id="alerts-region"
+                    value={region}
+                    onChange={(e) => setRegion(e.target.value)}
+                  >
+                    {regions.map((value) => (
+                      <option key={value}>{value}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <span className="field-label">Alert type</span>
+                  <div className="tab-row" style={{ marginBottom: 0 }}>
+                    {filters.map((value) => (
+                      <Button
+                        key={value}
+                        variant={filter === value ? 'primary' : 'outline'}
+                        onClick={() => setFilter(value)}
+                      >
+                        {value}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {error && (
+                <Notice>
+                  Unable to load live alerts: {error}
+                </Notice>
+              )}
+
+              {!error && !loading && alerts.length === 0 && (
+                <div className="inline-success" style={{ marginTop: 18 }}>
+                  No alert records matched the selected filters.
+                </div>
+              )}
+
+              <div style={{ marginTop: 20 }}>
+                {alerts.map((item: any) => (
+                  <div className="list-card" key={item.id}>
+                    <div className="list-meta">
+                      <div>
+                        <h3>{item.title}</h3>
+                        <small>
+                          {item.area} · {item.region ?? 'all'}
+                        </small>
+                      </div>
+                      <StatusPill tone={toneFor(item.severity)}>
+                        {item.is_sample ? 'Sample' : item.severity}
+                      </StatusPill>
+                    </div>
+
+                    <p>{item.detail}</p>
+
+                    <p className="source-line">
+                      Valid from {formatTime(item.valid_from)} · peak {formatTime(item.peak_at)}
+                      {' · '}
+                      {item.source}
+                      {' · '}
+                      {item.data_mode}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="stack">
+            <div className="content-panel">
+              <h2>What this feed tells you</h2>
+
+              <div className="list-card">
+                <h3><Waves size={16} /> Marine conditions</h3>
+                <p>Wave-related breaches are surfaced from the ORCA rule engine.</p>
+              </div>
+
+              <div className="list-card">
+                <h3><CloudLightning size={16} /> Weather signals</h3>
+                <p>Wind, gust and thunderstorm signals are included where forecast data supports them.</p>
+              </div>
+
+              <div className="list-card">
+                <h3><Bell size={16} /> Source context</h3>
+                <p>Every returned item carries source and data-mode information so cached/demo records are distinguishable.</p>
+              </div>
+            </div>
+
+            <div className="callout">
+              <strong>Important</strong>
+              <p>
+                A sample IMD-style alert can appear in the feed, but it is explicitly labelled as sample data and is not an active warning.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ marginTop: 34 }}>
+          <SectionHead
+            eyebrow="SAFETY BY DESIGN"
+            title="Signals with context"
+            description="ORCA keeps severity, location, timing, source and data mode together instead of presenting an unexplained warning."
+          />
+        </div>
+      </div>
+    </>
+  )
+}

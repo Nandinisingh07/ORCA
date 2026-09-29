@@ -1,7 +1,272 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
-import { Bell, Languages, Radio, Volume2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Languages, Radio, RefreshCw, Volume2 } from 'lucide-react'
 import { Button, Notice, PageIntro, SectionHead, StatusPill } from '../components/OrcaUI'
 import fishing from '../assets/orca-fishing.jpg'
-export const Route=createFileRoute('/briefings')({head:()=>({meta:[{title:'Daily Briefings — ORCA'},{name:'description',content:'Preview concise marine briefings with location, language and voice options planned for ORCA.'},{property:'og:title',content:'Daily Briefings — ORCA'},{property:'og:description',content:'A simple daily marine briefing designed for coastal communities.'},{property:'og:type',content:'website'},{name:'twitter:card',content:'summary_large_image'}]}),component:Briefings})
-function Briefings(){const [place,setPlace]=useState('Veraval, Gujarat');const [language,setLanguage]=useState('English');const [subscribed,setSubscribed]=useState(false);return <><PageIntro eyebrow="EVERYDAY COASTAL INFORMATION" title="Daily briefings" description="A concise daily view of the sea, built to help coastal communities prepare before the day begins." image={fishing}/><div className="container page-content"><Notice>This is a sample briefing layout. There is no live audio, forecast feed, SMS service or subscription delivery connected.</Notice><div className="content-grid" style={{marginTop:22}}><div className="stack"><div className="content-panel"><div className="panel-head"><h2>Your daily overview</h2><StatusPill tone="amber">Sample format</StatusPill></div><div className="field-row"><div><label className="field-label" htmlFor="briefing-place">Coastal location</label><select id="briefing-place" className="select" value={place} onChange={e=>setPlace(e.target.value)}><option>Veraval, Gujarat</option><option>Mumbai, Maharashtra</option><option>Panaji, Goa</option><option>Kochi, Kerala</option></select></div><div><label className="field-label" htmlFor="briefing-language">Preferred language</label><select id="briefing-language" className="select" value={language} onChange={e=>setLanguage(e.target.value)}><option>English</option><option>हिन्दी (Hindi)</option><option>ગુજરાતી (Gujarati)</option><option>தமிழ் (Tamil)</option></select></div></div><div className="callout" style={{marginTop:22}}><strong>Good morning, {place.split(',')[0]}</strong><p>A real briefing would summarize the latest sea state, expected changes, current official warnings and an advisory issue time. No current conditions are available in this prototype.</p></div><div className="data-grid" style={{marginTop:16}}><div className="data-card"><small>Sea conditions</small><strong>—</strong><span>Live data needed</span></div><div className="data-card"><small>Weather alerts</small><strong>—</strong><span>Live feed needed</span></div><div className="data-card"><small>PFZ advisory</small><strong>—</strong><span>Bulletin needed</span></div></div><p className="source-line">Language preference: {language}. Translated content and audio are planned, not active.</p></div><div className="content-panel"><h2>What goes into a briefing?</h2><div className="list-card"><h3>01 · Conditions</h3><p>Wave and wind conditions at the chosen location, with observation time.</p></div><div className="list-card"><h3>02 · Warnings</h3><p>Any active official marine or weather alert, clearly prioritized.</p></div><div className="list-card"><h3>03 · Useful context</h3><p>Fishing advisories, route considerations and a link to original sources.</p></div></div></div><div className="stack"><div className="content-panel"><h2>Delivery preferences</h2><p className="panel-desc">Preview how a daily briefing could fit into your routine.</p><label className="toggle-row"><span><strong>Daily briefing reminder</strong><small>Save preference in this page only</small></span><input type="checkbox" checked={subscribed} onChange={e=>setSubscribed(e.target.checked)}/></label><label className="toggle-row"><span><strong>Voice briefing</strong><small>Planned with language support</small></span><input type="checkbox" disabled/></label><label className="toggle-row"><span><strong>SMS / phone access</strong><small>Future service, not connected</small></span><input type="checkbox" disabled/></label>{subscribed&&<div className="inline-success">Reminder preference selected for this preview. No messages will be sent.</div>}</div><div className="content-panel"><h2>Listen instead of read</h2><p className="panel-desc">Short audio summaries could help when reading is inconvenient, in a preferred local language.</p><Button variant="outline" disabled><Volume2 size={15}/> Audio coming later</Button><p className="source-line">Voice playback requires a language and speech service.</p></div></div></div><div style={{marginTop:34}}><SectionHead eyebrow="INFORMATION THAT REACHES PEOPLE" title="The right format for the right moment" description="A briefing should be short enough to use each morning, while keeping the evidence available when needed."/><div className="below-grid"><div className="detail-tile"><Radio size={22}/><h3>Short and useful</h3><p>The essentials first, without making important warnings hard to find.</p></div><div className="detail-tile"><Languages size={22}/><h3>In your language</h3><p>A future multilingual experience can make coastal information more accessible.</p></div><div className="detail-tile"><Bell size={22}/><h3>When it matters</h3><p>Daily and urgent updates serve different needs; both deserve clear timing.</p></div></div></div></div></>}
+import { api } from '../lib/api'
+
+export const Route = createFileRoute('/briefings')({
+  head: () => ({
+    meta: [
+      { title: 'Daily Briefings — ORCA' },
+      {
+        name: 'description',
+        content: 'Generate a location-specific ORCA coastal briefing from the live backend.',
+      },
+    ],
+  }),
+  component: Briefings,
+})
+
+const places = [
+  'Veraval, Gujarat',
+  'Mumbai, Maharashtra',
+  'Panaji, Goa',
+  'Kochi, Kerala',
+]
+
+const languages = [
+  { label: 'English', value: 'en' },
+  { label: 'हिन्दी (Hindi)', value: 'hi' },
+  { label: 'ગુજરાતી (Gujarati)', value: 'gu' },
+  { label: 'தமிழ் (Tamil)', value: 'ta' },
+]
+
+function Briefings() {
+  const [place, setPlace] = useState(places[0])
+  const [language, setLanguage] = useState('en')
+  const [mode, setMode] = useState<'simple' | 'technical'>('simple')
+  const [data, setData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  const load = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      setData(await api.briefing(place, language, mode))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to generate briefing.')
+      setData(null)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    void load()
+  }, [place, language, mode])
+
+  const metrics = data?.sections?.conditions?.metrics ?? {}
+  const warnings = data?.sections?.warnings?.items ?? []
+  const zones = data?.sections?.pfz?.zones ?? []
+
+  return (
+    <>
+      <PageIntro
+        eyebrow="EVERYDAY COASTAL INFORMATION"
+        title="Daily briefings"
+        description="Generate a concise location-specific briefing from ORCA’s marine, weather, risk and fishing-zone pipeline."
+        image={fishing}
+      />
+
+      <div className="container page-content">
+        <Notice>
+          Audio delivery is not implemented yet. The text briefing itself is generated by the ORCA backend.
+        </Notice>
+
+        <div className="content-grid" style={{ marginTop: 22 }}>
+          <div className="stack">
+            <div className="content-panel">
+              <div className="panel-head">
+                <div>
+                  <h2>Your daily overview</h2>
+                  <p className="panel-desc" style={{ margin: 0 }}>
+                    {loading ? 'Generating briefing…' : 'Latest generated briefing'}
+                  </p>
+                </div>
+
+                <Button variant="outline" onClick={() => void load()} disabled={loading}>
+                  <RefreshCw size={15} />
+                  Refresh
+                </Button>
+              </div>
+
+              <div className="field-row" style={{ marginTop: 18 }}>
+                <div>
+                  <label className="field-label" htmlFor="briefing-place">
+                    Coastal location
+                  </label>
+                  <select
+                    id="briefing-place"
+                    className="select"
+                    value={place}
+                    onChange={(e) => setPlace(e.target.value)}
+                  >
+                    {places.map((value) => (
+                      <option key={value}>{value}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="field-label" htmlFor="briefing-language">
+                    Preferred language
+                  </label>
+                  <select
+                    id="briefing-language"
+                    className="select"
+                    value={language}
+                    onChange={(e) => setLanguage(e.target.value)}
+                  >
+                    {languages.map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <span className="field-label">Detail level</span>
+                  <div className="tab-row" style={{ marginBottom: 0 }}>
+                    <Button
+                      variant={mode === 'simple' ? 'primary' : 'outline'}
+                      onClick={() => setMode('simple')}
+                    >
+                      Plain
+                    </Button>
+                    <Button
+                      variant={mode === 'technical' ? 'primary' : 'outline'}
+                      onClick={() => setMode('technical')}
+                    >
+                      Technical
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {error && <Notice>Unable to generate briefing: {error}</Notice>}
+
+              {!error && data && (
+                <>
+                  <div className="callout" style={{ marginTop: 22 }}>
+                    <strong>{place.split(',')[0]} · {data.language}</strong>
+                    <p>{data.text}</p>
+                  </div>
+
+                  <div className="data-grid" style={{ marginTop: 16 }}>
+                    <div className="data-card">
+                      <small>Sea conditions</small>
+                      <strong>{metrics.wave_m_max ?? '—'} m</strong>
+                      <span>{data.sections.conditions.level}</span>
+                    </div>
+
+                    <div className="data-card">
+                      <small>Wind</small>
+                      <strong>{metrics.wind_kn_max ?? '—'} kn</strong>
+                      <span>Peak forecast wind</span>
+                    </div>
+
+                    <div className="data-card">
+                      <small>PFZ zones</small>
+                      <strong>{zones.length}</strong>
+                      <span>{data.sections.pfz.is_sample ? 'Sample format' : 'Satellite-derived'}</span>
+                    </div>
+                  </div>
+
+                  <p className="source-line">
+                    Data mode: {data.data_mode} · Confidence: {data.confidence?.level ?? '—'} ·
+                    Generated: {data.generated_at ? new Date(data.generated_at).toLocaleString() : '—'}
+                  </p>
+                </>
+              )}
+            </div>
+
+            <div className="content-panel">
+              <h2>Warnings in this briefing</h2>
+
+              {warnings.length === 0 ? (
+                <div className="inline-success">
+                  No rule-engine warning reasons were returned for this briefing.
+                </div>
+              ) : (
+                warnings.map((warning: any, index: number) => (
+                  <div className="list-card" key={`${warning.metric}-${index}`}>
+                    <div className="list-meta">
+                      <h3>{warning.metric?.replaceAll('_', ' ') ?? 'Warning signal'}</h3>
+                      <StatusPill tone={warning.level === 'unsafe' ? 'red' : 'amber'}>
+                        {warning.level}
+                      </StatusPill>
+                    </div>
+                    <p>
+                      Forecast value: {warning.value} {warning.unit ?? ''}
+                    </p>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="stack">
+            <div className="content-panel">
+              <h2>Briefing components</h2>
+
+              <div className="list-card">
+                <h3><Radio size={16} /> Conditions</h3>
+                <p>Wave and wind metrics with the corresponding data mode and confidence.</p>
+              </div>
+
+              <div className="list-card">
+                <h3><Languages size={16} /> Language</h3>
+                <p>The backend applies its configured language/template layer to the briefing.</p>
+              </div>
+
+              <div className="list-card">
+                <h3><Volume2 size={16} /> Voice</h3>
+                <p>Audio output remains explicitly unavailable until a speech service is connected.</p>
+              </div>
+            </div>
+
+            <div className="content-panel">
+              <h2>Fishing context</h2>
+              <p className="panel-desc">
+                Potential fishing zones are separate from the safety verdict.
+              </p>
+
+              {zones.slice(0, 4).map((zone: any, index: number) => (
+                <div className="list-card" key={zone.id ?? index}>
+                  <h3>Candidate zone {index + 1}</h3>
+                  <p>
+                    {zone.distance_km != null ? `${zone.distance_km} km away` : 'Distance unavailable'}
+                    {zone.compass ? ` · ${zone.compass}` : ''}
+                  </p>
+                </div>
+              ))}
+
+              {zones.length === 0 && (
+                <div className="source-line">
+                  No zone records returned for this briefing.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ marginTop: 34 }}>
+          <SectionHead
+            eyebrow="INFORMATION THAT REACHES PEOPLE"
+            title="A generated briefing, not a static mock"
+            description="The selected place, language and mode are sent to the ORCA backend and the returned evidence is shown in the interface."
+          />
+        </div>
+
+        {data?.disclaimer && (
+          <p className="source-line" style={{ marginTop: 24 }}>
+            {data.disclaimer}
+          </p>
+        )}
+      </div>
+    </>
+  )
+}
